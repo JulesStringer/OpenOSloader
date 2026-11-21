@@ -197,54 +197,70 @@ async function run(){
                                     if ( dataset.clip ){
                                         clip = dataset.clip
                                     }
-                                    let source = dataset.source.replace('{VERSION}', product.version.replace('-', ''));
-                                    let environment = {
-                                        SOURCE: unzipped + '/' + source,
-                                        TARGET_DIR: target.directory + '/',
-                                        MAPDATA_DIR: processed_dir,
-                                        ZIPBASE: zips_dir, // Custom variable for the zips directory
-                                        PROCESSED_DIR: processed_dir // Custom variable for the processed data directory
-                                    };
-                                    if ( dataset.sourcefiles){
-                                        // this must be done by script
-                                        environment['SOURCEFILES'] = dataset.sourcefiles;
-                                    }   
-                                    if ( clip ){
-                                        environment['CLIPSRC'] = processed_dir + '/' + clip;
+                                    console.log(`dataset.source ${dataset.source.toString()} type: ${typeof(dataset.source)}`);
+                                    if ( typeof(dataset.source) == 'object'){
+                                        console.log(`dataset.source was ${JSON.stringify(dataset.source, null, 2)}`);
                                     }
-                                    if ( dataset.where ){
-                                        let where = dataset.where;
-                                        if ( dataset.where_codes ){
-                                            where = where.replace('@codes', "'" + dataset.where_codes.join("','") + "'");
+                                    try {
+                                        let source = dataset.source;
+                                        if ( Array.isArray(source)){
+                                            if ( source.length > 1 ){
+                                                let err = new Error(`Multivalued array ${JSON.stringify(dataset.source, null, 2)} not handled`);
+                                                throw err;
+                                            }
+                                            source = source[0];
                                         }
-                                        console.log('Where: ' + where);
-                                        environment['WHERE'] = where;
-                                    }
-                                    if ( dataset.targets.length == 1 ){
-                                        environment['TARGET'] = dataset.targets[0];
-                                    } else {
-                                        environment['TARGETS'] = dataset.targets;
-                                    }
-                                    if ( dataset.script ){
-                                        let scriptpath = __dirname + '/' + current.script + dataset.script;
-                                        console.log('Executing ' + scriptpath);
-                                        await utils.executeScript(scriptpath, environment);
-                                        console.log('Executed ' + scriptpath);
-                                    } else {
-                                        await utils.executeogr(environment)
-                                    }
-                                    // Report file sizes
-                                    for(let j = 0; j < dataset.targets.length; j++){
-                                        let filesize = await getfilesize( dataset.targets[j]);
-                                        console.log('File size of ' + dataset.targets[j] + ' is ' + filesize.toFixed(2) + ' MB');
-                                        // update version
-                                        let d = new Date();
-                                        let version = {
-                                            "version":product.version,
-                                            "loaded":d.toISOString()
+                                        source = source.replace('{VERSION}', product.version.replace('-', ''));
+                                        let environment = {
+                                            SOURCE: unzipped + '/' + source,
+                                            TARGET_DIR: target.directory + '/',
+                                            MAPDATA_DIR: processed_dir,
+                                            ZIPBASE: zips_dir, // Custom variable for the zips directory
+                                            PROCESSED_DIR: processed_dir // Custom variable for the processed data directory
+                                        };
+                                        if ( dataset.sourcefiles){
+                                            // this must be done by script
+                                            environment['SOURCEFILES'] = dataset.sourcefiles;
+                                        }   
+                                        if ( clip ){
+                                            environment['CLIPSRC'] = processed_dir + '/' + clip;
                                         }
-                                        let key = getfilename(dataset.targets[j]);
-                                        target.versions[key] = version;
+                                        if ( dataset.where ){
+                                            let where = dataset.where;
+                                            if ( dataset.where_codes ){
+                                                where = where.replace('@codes', "'" + dataset.where_codes.join("','") + "'");
+                                            }
+                                            console.log('Where: ' + where);
+                                            environment['WHERE'] = where;
+                                        }
+                                        if ( dataset.targets.length == 1 ){
+                                            environment['TARGET'] = dataset.targets[0];
+                                        } else {
+                                            environment['TARGETS'] = dataset.targets;
+                                        }
+                                        if ( dataset.script ){
+                                            let scriptpath = __dirname + '/' + current.script + dataset.script;
+                                            console.log('Executing ' + scriptpath);
+                                            await utils.executeScript(scriptpath, environment);
+                                            console.log('Executed ' + scriptpath);
+                                        } else {
+                                            await utils.executeogr(environment)
+                                        }
+                                        // Report file sizes
+                                        for(let j = 0; j < dataset.targets.length; j++){
+                                            let filesize = await getfilesize( dataset.targets[j]);
+                                            console.log('File size of ' + dataset.targets[j] + ' is ' + filesize.toFixed(2) + ' MB');
+                                            // update version
+                                            let d = new Date();
+                                            let version = {
+                                                "version":product.version,
+                                                "loaded":d.toISOString()
+                                            }
+                                            let key = getfilename(dataset.targets[j]);
+                                            target.versions[key] = version;
+                                        }
+                                    } catch( err ){
+                                        console.error(`Err: ${err.toString()} processing daasets`);
                                     }
                                 }
                                 
